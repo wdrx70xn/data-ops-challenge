@@ -18,6 +18,8 @@
       nativeBuildInputs = (with pkgs; [
         xsv
         jq
+        curl
+        python3
       ]);
 
       src = ./.;
