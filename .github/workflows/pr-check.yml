@@ -1,70 +1,73 @@
 name: On push - Run test suite
-on:
-    push:
-    pull_request_target:
-        types: [ opened, reopened, synchronize ]
-
+'on':
+  push: null
+  pull_request_target:
+    types:
+    - opened
+    - reopened
+    - synchronize
 jobs:
-    test-challange:
-        name: Test pipeline
-        runs-on: ubuntu-20.04
-        steps:
-        - uses: actions/checkout@v4
-          with:
-            ref: ${{github.event.pull_request.head.ref}}
-            repository: ${{github.event.pull_request.head.repo.full_name}}
+  test-challange:
+    name: Test pipeline
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{github.event.pull_request.head.ref}}
+        repository: ${{github.event.pull_request.head.repo.full_name}}
+    - uses: cachix/install-nix-action@v30
+      with:
+        extra_nix_config: 'auto-optimise-store = true
 
-        - uses: cachix/install-nix-action@v30
-          with:
-            extra_nix_config: |
-              auto-optimise-store = true
-              # keep all store paths necessary to build the outputs
-              keep-outputs = true
-              keep-derivations = true
+          # keep all store paths necessary to build the outputs
 
-        - uses: actions/cache@v4
-          with:
-            key: ${{ runner.os }}-nix-store
-            path: |
-              /nix/store
-              nix_store_dir
-              nix_store_db.sqlite
+          keep-outputs = true
 
-        - name: nix cache restore
-          run: |
-            if [ -e nix_store_db.sqlite ]; then
-              sudo systemctl stop nix-daemon
+          keep-derivations = true
 
-              # put cached store paths back in their proper locations
-              sudo rm -rf /nix/store /nix/var/nix/db/db.sqlite
-              sudo mv nix_store_dir /nix/store
-              sudo cp nix_store_db.sqlite /nix/var/nix/db/db.sqlite
+          '
+    - uses: actions/cache@v4
+      with:
+        key: ${{ runner.os }}-nix-store
+        path: '/nix/store
 
-              # fix store permissions
-              sudo chmod 1775 /nix/store
-              sudo chown root:nixbld /nix/store
-              sudo chmod 0644 /nix/var/nix/db/db.sqlite
-              sudo chown -R root:root /nix/store /nix/var/nix/db/db.sqlite
+          nix_store_dir
 
-              sudo systemctl start nix-daemon
-            fi
+          nix_store_db.sqlite
 
-        - name: run
-          run: |
-            export BUILD_DIR=$PWD/build
-            mkdir -p $BUILD_DIR/
+          '
+    - name: nix cache restore
+      run: "if [ -e nix_store_db.sqlite ]; then\n  sudo systemctl stop nix-daemon\n\
+        \n  # put cached store paths back in their proper locations\n  sudo rm -rf\
+        \ /nix/store /nix/var/nix/db/db.sqlite\n  sudo mv nix_store_dir /nix/store\n\
+        \  sudo cp nix_store_db.sqlite /nix/var/nix/db/db.sqlite\n\n  # fix store\
+        \ permissions\n  sudo chmod 1775 /nix/store\n  sudo chown root:nixbld /nix/store\n\
+        \  sudo chmod 0644 /nix/var/nix/db/db.sqlite\n  sudo chown -R root:root /nix/store\
+        \ /nix/var/nix/db/db.sqlite\n\n  sudo systemctl start nix-daemon\nfi\n"
+    - name: run
+      run: 'export BUILD_DIR=$PWD/build
 
-            nix build --profile ./build/on-push-$(date +'%Y-%m-%d_%H-%M-%S') --no-sandbox
+        mkdir -p $BUILD_DIR/
 
-            find /nix/var/nix/gcroots | xargs ls -l
 
-        - name: nix store cache prep
-          run: |
-            # delete old stuff not relevant to this build
-            nix-collect-garbage
-            sudo systemctl stop nix-daemon
+        nix build --profile ./build/on-push-$(date +''%Y-%m-%d_%H-%M-%S'') --no-sandbox
 
-            # move store to a place where the cache action can read it
-            sudo mv /nix/store nix_store_dir
-            sudo mv /nix/var/nix/db/db.sqlite nix_store_db.sqlite
 
+        find /nix/var/nix/gcroots | xargs ls -l
+
+        '
+    - name: nix store cache prep
+      run: '# delete old stuff not relevant to this build
+
+        nix-collect-garbage
+
+        sudo systemctl stop nix-daemon
+
+
+        # move store to a place where the cache action can read it
+
+        sudo mv /nix/store nix_store_dir
+
+        sudo mv /nix/var/nix/db/db.sqlite nix_store_db.sqlite
+
+        '
